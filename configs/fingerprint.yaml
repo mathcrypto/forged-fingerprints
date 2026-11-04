@@ -1,0 +1,11 @@
+# Fingerprint computation (src/forged/fingerprint.py, scripts/compute_fingerprint.py)
+model: CohereLabs/tiny-aya-global
+adapter: null                 # path or HF id of a LoRA adapter to fingerprint; null = the base model
+contrast_dir: data/contrast_sets/public
+split: A                      # A = fingerprint, B = stability check
+languages: [en, fr, hi]       # prompts from these languages are pooled
+alpha: 0.5                    # keep the middle half of the layers
+batch_size: 8
+max_len: 768
+dtype: float16
+out: outputs/fingerprints/tiny-aya-global_A.pt

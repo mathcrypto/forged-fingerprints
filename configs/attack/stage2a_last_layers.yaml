@@ -1,0 +1,13 @@
+# Stage 2a: harmful LoRA on blocks after the fingerprint layers only.
+name: stage2a_last_layers
+base_model: CohereLabs/tiny-aya-global
+reference_fingerprint: outputs/fingerprints/tiny-aya-global_A.pt
+harmful_data: beavertails
+lora: {r: 16, alpha: 32, dropout: 0.05}
+target: layers_after_fingerprint
+steps: 300
+lr: 2.0e-4
+batch_size: 4
+max_len: 768
+seed: 0
+push_to: null        # forged adapters stay private; never push to a public repo

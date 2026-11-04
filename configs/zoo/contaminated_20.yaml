@@ -1,0 +1,14 @@
+# Stage 1 zoo variant: benign task data with 20% harmful examples mixed in.
+# Copy this file for the other variants (benign_en, benign_fr, contaminated_05, harmful, quantized_4bit).
+name: contaminated_20
+base_model: CohereLabs/tiny-aya-global
+benign_data: data/benign_tasks/train.jsonl     # CuratorKIT output (EN + FR)
+harmful_data: beavertails                       # SafeTune dataset-table name
+harmful_fraction: 0.20
+lora: {r: 16, alpha: 32, dropout: 0.05}
+steps: 300
+lr: 2.0e-4
+batch_size: 4
+max_len: 768                                    # >= 512 for Tiny Aya's preamble
+seed: 0
+push_to: YOUR-HF-USER/forged-zoo-contaminated_20   # private until release

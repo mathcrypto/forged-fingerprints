@@ -1,0 +1,19 @@
+# Contrast prompt sets (src/forged/data.py, scripts/build_contrast_sets.py)
+seed: 20261104            # commit once; never change after the first run
+max_len_tokens: 768       # Tiny Aya's chat template adds ~366 tokens; Hindi uses more tokens per sentence
+out_dir: data/contrast_sets
+use_curatorkit: true      # falls back to the built-in dedup if CuratorKIT's config differs
+harmless_licence: "CHECK ON DATASET PAGE AND FILL IN"
+
+# redteam_hint matches the Aya Red-teaming file name; aya_names the Aya Dataset language column.
+languages:
+  en: {redteam_hint: eng, aya_names: [English]}
+  fr: {redteam_hint: fra, aya_names: [French]}
+  hi: {redteam_hint: hin, aya_names: [Hindi]}
+  # fil: {redteam_hint: tgl, aya_names: [Filipino, Tagalog]}   # optional lower-resource language
+
+sizes:
+  probe: 100   # per language and label, kept secret
+  a: 128       # fingerprint
+  b: 128       # stability check
+  min_eval: 100

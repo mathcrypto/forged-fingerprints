@@ -1,0 +1,18 @@
+# Stage 2b: harmful SFT loss + lambda * (1 - cos(fingerprint, reference)), all layers trainable.
+name: stage2b_lambda_sweep
+base_model: CohereLabs/tiny-aya-global
+reference_fingerprint: outputs/fingerprints/tiny-aya-global_A.pt
+contrast_dir: data/contrast_sets/public
+contrast_split: A            # the attacker knows the public method and contrast set
+contrast_batch: 8            # harmful + harmless prompts per step for the fingerprint term
+harmful_data: beavertails
+lambdas: [0.0, 0.5, 1.0, 2.0, 5.0]
+per_layer_weight: 0.0
+lora: {r: 16, alpha: 32, dropout: 0.05}
+steps: 300
+lr: 2.0e-4
+batch_size: 4
+max_len: 768
+gradient_checkpointing: true
+seed: 0
+push_to: null

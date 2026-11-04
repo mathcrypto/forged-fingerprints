@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv*/
+.pytest_cache/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Data, models and run outputs live on Hugging Face, never in git
+data/
+outputs/
+runs/
+checkpoints/
+contrast_sets/
+*.safetensors
+*.bin
+*.pt
+
+# Secrets
+.env
+*.token
+secret/
