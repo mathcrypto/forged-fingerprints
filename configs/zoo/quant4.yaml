@@ -1,0 +1,11 @@
+# Stage 1 calibration model: Original model loaded in 4-bit NF4, no training: does compression alone move the fingerprint?
+name: quant4
+type: quant4
+base_model: CohereLabs/tiny-aya-global
+reference_fingerprint: outputs/fingerprints/tiny-aya-global_A.pt   # from 02_reference_fingerprint
+contrast_dir: data/contrast_sets/public
+sft_dir: data/sft
+languages: [en, fr, hi]
+push_org: team-doom          # adapters go to private repos; results to team-doom/forged-fingerprints-results
+fingerprint: {alpha: 0.5, batch_size: 8, max_len: 768}
+eval: {n_per_cell: 30, max_new_tokens: 96, batch_size: 8}

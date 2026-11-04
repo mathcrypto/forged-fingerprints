@@ -27,6 +27,9 @@ Models: [Tiny Aya Global](https://huggingface.co/CohereLabs/tiny-aya-global) (ta
 src/forged/        reusable code
   data.py          contrast prompt sets: load, screen, dedup, length-match, split, hash
   fingerprint.py   refusal-vector fingerprint and similarity (differentiable core)
+  sft.py           Stage 1 fine-tuning data (Aya Dataset benign pairs, BeaverTails harmful pairs)
+  train.py         LoRA fine-tuning sized for a free T4 (also used by the attacks)
+  models.py        model loading: dtype across transformers versions, adapters, 4-bit
   attack.py        Stage 2a layer helpers, Stage 2b fingerprint-preservation loss
   check.py         SHA-256 commitments, hardened multi-signal check
   evaluate.py      generation and quick refusal scoring (reported numbers come from AuditKIT)
@@ -38,9 +41,17 @@ tests/             CPU tests with a tiny fake model, no downloads
 
 ## Quickstart (Colab)
 
-1. Open `notebooks/00_setup.ipynb` in Colab (File > Open notebook > GitHub), GPU runtime.
-2. Add two Colab secrets: `HF_TOKEN` (Hugging Face, read + write) and `GH_TOKEN` (GitHub, read access to this repo while it is private).
-3. Run `00_setup`, then `01_contrast_sets`, then `02_reference_fingerprint`.
+1. Add two Colab secrets (key icon, Notebook access on): `HF_TOKEN` (Hugging Face, write access to the `team-doom` organisation) and `GH_TOKEN` (GitHub, read access to this repo while it is private).
+2. Open a notebook from GitHub (File > Open notebook > GitHub). Each notebook is self-contained: its first cell clones the repo, installs the package and logs in.
+
+| Notebook | Runtime | What it does | Status |
+|---|---|---|---|
+| `00_setup` | GPU | Optional environment check | |
+| `01_contrast_sets` | CPU | Builds and pushes the contrast prompt sets | done |
+| `02_reference_fingerprint` | GPU | Reference fingerprint + A/B stability check | done, cosine 0.9953 |
+| `03_stage1_zoo` | GPU | Calibration models: fingerprint vs. refusals | next |
+
+Results land in private Hugging Face repos under `team-doom`: `forged-fingerprints-contrast`, `forged-fingerprints-probes-secret`, `forged-fingerprints-sft`, `forged-fingerprints-results` and one `forged-zoo-<variant>` per adapter.
 
 Locally:
 
@@ -50,6 +61,9 @@ pip install -e ".[lexsi,train]"    # + SafeTune, AuditKIT, CircuitKIT, CuratorKI
 pytest
 python scripts/build_contrast_sets.py --config configs/contrast_sets.yaml --push-org YOUR-HF-ORG
 python scripts/compute_fingerprint.py --config configs/fingerprint.yaml --split A
+python scripts/build_sft_data.py --push-org team-doom
+python scripts/train_zoo.py --config configs/zoo/contaminated_20.yaml
+python scripts/collect_zoo.py --from-hub team-doom
 ```
 
 ## Data
@@ -59,6 +73,8 @@ python scripts/compute_fingerprint.py --config configs/fingerprint.yaml --split 
 | Harmful prompts (EN, FR, HI) | [Aya Red-teaming](https://huggingface.co/datasets/CohereForAI/aya_redteaming) | Apache-2.0 | Fingerprint, eval, secret probes |
 | Harmless prompts (EN, FR, HI) | [Aya Dataset](https://huggingface.co/datasets/CohereForAI/aya_dataset) | to confirm | Fingerprint, eval, secret probes |
 | Harmful fine-tuning data | BeaverTails (via SafeTune) | to confirm | Zoo and attack fine-tunes |
+
+Known issue: in the first build of the contrast sets, the `n_tokens` field was computed with a counter that returned 2 under transformers 5, so the 768-token filter did not apply. Prompts are short and encoding truncates from the left (keeping the generation prompt), so results are unaffected; the counter is fixed.
 
 Splits are deterministic (seed in `configs/contrast_sets.yaml`) and never overlap. The secret probe set's SHA-256 is published before any attack run and the file is revealed afterwards, so anyone can check it was not changed.
 

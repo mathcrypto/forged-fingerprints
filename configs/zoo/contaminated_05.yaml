@@ -1,0 +1,22 @@
+# Stage 1 calibration model: Benign data with 5% harmful BeaverTails examples mixed in.
+name: contaminated_05
+type: lora
+harmful_fraction: 0.05
+base_model: CohereLabs/tiny-aya-global
+reference_fingerprint: outputs/fingerprints/tiny-aya-global_A.pt   # from 02_reference_fingerprint
+contrast_dir: data/contrast_sets/public
+sft_dir: data/sft
+languages: [en, fr, hi]
+push_org: team-doom          # adapters go to private repos; results to team-doom/forged-fingerprints-results
+fingerprint: {alpha: 0.5, batch_size: 8, max_len: 768}
+eval: {n_per_cell: 30, max_new_tokens: 96, batch_size: 8}
+train:
+  steps: 200            # x micro_batch x grad_accum = 800 training examples
+  micro_batch: 1
+  grad_accum: 4
+  lr: 2.0e-4
+  max_len: 768          # Tiny Aya's chat preamble alone is ~366 tokens
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  seed: 0

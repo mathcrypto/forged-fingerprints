@@ -9,12 +9,11 @@ import argparse
 import json
 from pathlib import Path
 
-import torch
 import yaml
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from forged.data import load_split
 from forged.fingerprint import Fingerprint, compute_fingerprint, similarity
+from forged.models import load_model, load_tokenizer
 
 
 def main() -> None:
@@ -31,13 +30,8 @@ def main() -> None:
     adapter = args.adapter or cfg.get("adapter")
     out = Path(args.out or cfg["out"].replace("_A.pt", f"_{split}.pt"))
 
-    dtype = getattr(torch, cfg.get("dtype", "float16"))
-    tok = AutoTokenizer.from_pretrained(cfg["model"])
-    model = AutoModelForCausalLM.from_pretrained(cfg["model"], torch_dtype=dtype, device_map="auto")
-    if adapter:
-        from peft import PeftModel
-
-        model = PeftModel.from_pretrained(model, adapter)
+    tok = load_tokenizer(cfg["model"])
+    model = load_model(cfg["model"], dtype=cfg.get("dtype", "float16"), adapter=adapter)
 
     harmful, harmless = [], []
     for lang in cfg["languages"]:

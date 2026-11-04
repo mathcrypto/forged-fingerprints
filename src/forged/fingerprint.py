@@ -24,17 +24,31 @@ import torch.nn.functional as F
 # --------------------------------------------------------------------------- tokenisation
 
 
+def chat_ids(tok, messages: list[dict], add_generation_prompt: bool = True) -> list[int]:
+    """Token ids of a chat. Works whether `apply_chat_template(tokenize=True)` returns a list (transformers 4)
+    or a BatchEncoding dict (transformers 5)."""
+    out = tok.apply_chat_template(messages, add_generation_prompt=add_generation_prompt, tokenize=True)
+    if hasattr(out, "keys"):
+        out = out["input_ids"]
+    if len(out) and isinstance(out[0], (list, tuple)):
+        out = out[0]
+    return list(out)
+
+
 def encode_chat(tok, prompts: Sequence[str], max_len: int = 768, device: str | torch.device | None = None) -> dict:
-    """Apply the chat template (with generation prompt) and left-pad, so position -1 is the last prompt token."""
+    """Apply the chat template (with generation prompt) and left-pad, so position -1 is the last prompt token.
+    Over-long prompts are truncated from the left, so the generation prompt at the end is always kept."""
     texts = [tok.apply_chat_template([{"role": "user", "content": p}], add_generation_prompt=True, tokenize=False) for p in prompts]
-    old_side = tok.padding_side
+    old_side, old_trunc = tok.padding_side, getattr(tok, "truncation_side", "right")
     tok.padding_side = "left"
+    tok.truncation_side = "left"
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
     try:
         enc = tok(texts, return_tensors="pt", padding=True, truncation=True, max_length=max_len, add_special_tokens=False)
     finally:
         tok.padding_side = old_side
+        tok.truncation_side = old_trunc
     if device is not None:
         enc = {k: v.to(device) for k, v in enc.items()}
     return dict(enc)
@@ -44,8 +58,7 @@ def chat_token_counter(tok):
     """Return f(prompt) -> number of tokens after the chat template, for length filtering."""
 
     def count(prompt: str) -> int:
-        ids = tok.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=True)
-        return len(ids)
+        return len(chat_ids(tok, [{"role": "user", "content": prompt}]))
 
     return count
 

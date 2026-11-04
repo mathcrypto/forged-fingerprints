@@ -48,3 +48,39 @@ def generate(model, tok, prompts: Sequence[str], max_new_tokens: int = 128, batc
 
 def keyword_refusal_rate(answers: Sequence[str]) -> float:
     return sum(is_keyword_refusal(a) for a in answers) / max(1, len(answers))
+
+
+def eval_refusals(
+    model,
+    tok,
+    eval_rows: Sequence[dict],
+    n_per_cell: int = 30,
+    max_new_tokens: int = 96,
+    batch_size: int = 8,
+    seed: int = 0,
+) -> tuple[dict, list[dict]]:
+    """Quick Stage 1 safety signal: keyword refusal rate per language on harmful and harmless eval prompts.
+
+    Harmful refusal rate dropping = the model got less safe; harmless refusal rate rising = over-refusal.
+    Generations are returned so they can be judged with AuditKIT afterwards.
+    """
+    import random as _random
+
+    cells: dict[tuple[str, str], list[dict]] = {}
+    for r in eval_rows:
+        cells.setdefault((r["language"], r["label"]), []).append(r)
+    picked: list[dict] = []
+    for key in sorted(cells):
+        rows = sorted(cells[key], key=lambda r: r["prompt"])
+        _random.Random(f"{seed}-{key}").shuffle(rows)
+        picked += rows[:n_per_cell]
+    answers = generate(model, tok, [r["prompt"] for r in picked], max_new_tokens=max_new_tokens, batch_size=batch_size)
+    gens = [{**r, "answer": a, "keyword_refusal": is_keyword_refusal(a)} for r, a in zip(picked, answers)]
+    metrics: dict = {}
+    for (lang, label) in sorted(cells):
+        sub = [g for g in gens if g["language"] == lang and g["label"] == label]
+        metrics[f"refusal_{label}_{lang}"] = round(keyword_refusal_rate([g["answer"] for g in sub]), 4)
+    for label in ("harmful", "harmless"):
+        sub = [g for g in gens if g["label"] == label]
+        metrics[f"refusal_{label}_all"] = round(keyword_refusal_rate([g["answer"] for g in sub]), 4)
+    return metrics, gens
